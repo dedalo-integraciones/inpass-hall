@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-verde: #009292;
+  --color-verde-hover: #007a7a;
+  --color-azul: #1a2a3a;
+  --color-azul-hover: #0f1d2a;
+  --color-gris-bg: #f4f7f9;
+  --color-gris-bor: #dde3ea;
+  --color-texto: #1a2a3a;
+  --color-suave: #6c7a89;
+  --color-rojo: #c0392b;
+  --color-amarillo-bg: #fff8e6;
+  --color-amarillo-bor: #f0c040;
+  
+  --font-poppins: 'Poppins', sans-serif;
+}
+
+body {
+  font-family: var(--font-poppins);
+  background-color: var(--color-gris-bg);
+  color: var(--color-texto);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 16px 48px;
+}
+
+/* Custom class extensions to map the existing style without over-polluting React classes */
+@layer components {
+  .btn {
+    @apply w-full p-[14px] border-none rounded-[10px] font-poppins text-[0.88rem] font-semibold cursor-pointer uppercase tracking-[0.8px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primario {
+    @apply bg-verde text-white hover:not-disabled:bg-verde-hover;
+  }
+  .btn-secundario {
+    @apply bg-azul text-white hover:not-disabled:bg-azul-hover;
+  }
+  .btn-outline {
+    @apply bg-white text-verde border-[1.5px] border-verde hover:not-disabled:bg-gris-bg;
+  }
+
+  .campo {
+    @apply mb-[14px];
+  }
+  .campo label {
+    @apply block text-[0.78rem] font-semibold text-suave uppercase tracking-[0.5px] mb-[5px];
+  }
+  .campo input, .campo select {
+    @apply w-full p-[12px_14px] border-[1.5px] border-gris-bor rounded-[10px] font-poppins text-[0.93rem] text-texto bg-white transition-colors outline-none focus:border-verde;
+  }
+  .campo input.error-campo {
+    @apply border-rojo;
+  }
+  .seccion-label {
+    @apply text-[0.72rem] font-semibold text-suave uppercase tracking-[1.2px] text-center mb-[22px];
+  }
+}
