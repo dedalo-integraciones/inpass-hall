@@ -252,6 +252,8 @@ function Evolucion({ session }: { session: UserSession }) {
     const startDate = new Date(desde + 'T12:00:00');
     const endDate = new Date(hasta + 'T12:00:00');
     
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return [];
+
     const result = [];
     const dataMap = new Map();
     for(const d of data) {
@@ -273,13 +275,13 @@ function Evolucion({ session }: { session: UserSession }) {
   }, [data, desde, hasta]);
 
   // Stats calculation
-  const pesos = data.map(r => parseFloat(r.peso_kg));
-  const min = pesos.length ? Math.min(...pesos) : 0;
-  const max = pesos.length ? Math.max(...pesos) : 0;
+  const pesos = data.map(r => parseFloat(r.peso_kg)).filter(v => !isNaN(v));
+  const min = pesos.length > 0 ? Math.min(...pesos) : 0;
+  const max = pesos.length > 0 ? Math.max(...pesos) : 0;
   const domainMin = pesos.length > 0 ? Math.max(0, Math.floor(min) - 1) : 0;
   const domainMax = pesos.length > 0 ? Math.ceil(max) + 1 : 100;
-  const primerPeso = pesos.length ? pesos[0] : 0;
-  const ultimoPeso = pesos.length ? pesos[pesos.length-1] : 0;
+  const primerPeso = pesos.length > 0 ? pesos[0] : 0;
+  const ultimoPeso = pesos.length > 0 ? pesos[pesos.length-1] : 0;
   const evolucion = ultimoPeso - primerPeso;
   const evolucionColor = evolucion < 0 ? 'text-verde' : evolucion > 0 ? 'text-rojo' : 'text-[#eab308]';
   const registrosNoEfectuados = filledData.length - data.length;
@@ -340,14 +342,15 @@ function Evolucion({ session }: { session: UserSession }) {
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={filledData}>
                   <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#dde3ea" />
-                  <XAxis dataKey="fecha_registro" tickFormatter={(v) => { const parts = v.split('-'); return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`; }} tick={{fontSize: 11, fill: '#6c7a89'}} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="fecha_registro" tickFormatter={(v) => { if (typeof v !== 'string') return ''; const parts = v.split('-'); return parts.length >= 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : v; }} tick={{fontSize: 11, fill: '#6c7a89'}} axisLine={false} tickLine={false} />
                   <YAxis domain={[domainMin, domainMax]} tickFormatter={(v) => Number(v).toFixed(2)} tick={{fontSize: 11, fill: '#6c7a89'}} axisLine={false} tickLine={false} />
                   <Tooltip 
                     cursor={{fill: 'rgba(0,146,146,0.05)'}} 
                     content={({ active, payload, label }) => {
                       if (active && label) {
-                        const parts = String(label).split('-');
-                        const formattedLabel = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : label;
+                        const labelStr = String(label);
+                        const parts = labelStr.split('-');
+                        const formattedLabel = parts.length >= 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : labelStr;
                         const val = payload && payload.length ? payload[0].value : null;
                         if (val === null || val === 0) {
                           return (
