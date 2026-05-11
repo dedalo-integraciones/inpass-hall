@@ -255,26 +255,12 @@ function Evolucion({ session }: { session: UserSession }) {
   };
 
   const filledData = useMemo(() => {
-<<<<<<< HEAD
     try {
       if (!desde || !hasta) return [];
       const startDate = new Date(desde + 'T12:00:00');
       const endDate = new Date(hasta + 'T12:00:00');
       
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return [];
-=======
-    if (!desde || !hasta) return [];
-    const startDate = new Date(desde + 'T12:00:00');
-    const endDate = new Date(hasta + 'T12:00:00');
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return [];
-
-    const result = [];
-    const dataMap = new Map();
-    for(const d of data) {
-       dataMap.set(d.fecha_registro, d.peso_kg);
-    }
->>>>>>> 287db4907b0e97c1fe3ac4bb95be1037e674c91d
 
       const result = [];
       const dataMap = new Map();
@@ -303,11 +289,7 @@ function Evolucion({ session }: { session: UserSession }) {
   }, [data, desde, hasta]);
 
   // Stats calculation
-<<<<<<< HEAD
   const pesos = (data || []).map(r => parseFloat(r.peso_kg)).filter(v => !isNaN(v) && isFinite(v));
-=======
-  const pesos = data.map(r => parseFloat(r.peso_kg)).filter(v => !isNaN(v));
->>>>>>> 287db4907b0e97c1fe3ac4bb95be1037e674c91d
   const min = pesos.length > 0 ? Math.min(...pesos) : 0;
   const max = pesos.length > 0 ? Math.max(...pesos) : 0;
   const domainMin = pesos.length > 0 ? Math.max(0, Math.floor(min) - 1) : 0;
@@ -379,21 +361,12 @@ function Evolucion({ session }: { session: UserSession }) {
                   <Tooltip 
                     cursor={{fill: 'rgba(0,146,146,0.05)'}} 
                     content={({ active, payload, label }) => {
-<<<<<<< HEAD
                       if (active && payload && payload.length) {
                         const labelStr = String(label || '');
                         const parts = labelStr.split('-');
                         const formattedLabel = parts.length >= 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : labelStr;
                         const val = payload[0].value;
                         if (val === null || val === undefined || isNaN(Number(val))) {
-=======
-                      if (active && label) {
-                        const labelStr = String(label);
-                        const parts = labelStr.split('-');
-                        const formattedLabel = parts.length >= 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : labelStr;
-                        const val = payload && payload.length ? payload[0].value : null;
-                        if (val === null || val === 0) {
->>>>>>> 287db4907b0e97c1fe3ac4bb95be1037e674c91d
                           return (
                             <div className="bg-white p-[10px] border border-gris-bor shadow-lg rounded-[8px] text-[0.8rem] text-texto text-center">
                               <p className="font-semibold mb-[2px]">{formattedLabel}</p>
