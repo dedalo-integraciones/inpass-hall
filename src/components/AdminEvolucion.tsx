@@ -405,6 +405,7 @@ function EvolucionBarChart({ email, nombre }: { email: string, nombre: string })
                   <Tooltip 
                     cursor={{fill: 'rgba(0,146,146,0.05)'}} 
                     content={({ active, payload, label }) => {
+<<<<<<< HEAD
                       if (active && payload && payload.length) {
                         const labelStr = String(label || '');
                         const parts = labelStr.split('-');
@@ -417,6 +418,15 @@ function EvolucionBarChart({ email, nombre }: { email: string, nombre: string })
                               <p className="text-suave">Sin registro</p>
                             </div>
                           );
+=======
+                      if (active && label) {
+                        const labelStr = String(label);
+                        const parts = labelStr.split('-');
+                        const formattedLabel = parts.length >= 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : labelStr;
+                        const val = payload && payload.length ? payload[0].value : null;
+                        if (val === null || val === 0) {
+                          return null;
+>>>>>>> 287db4907b0e97c1fe3ac4bb95be1037e674c91d
                         }
                         return (
                           <div className="bg-white p-[10px] border border-gris-bor shadow-lg rounded-[8px] text-[0.8rem] text-texto text-center">
