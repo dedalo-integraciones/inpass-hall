@@ -231,55 +231,71 @@ function Evolucion({ session }: { session: UserSession }) {
   const handleCargar = async () => {
     if (!desde || !hasta) return;
     setLoading(true);
-    const { data: records, error } = await supabase
-      .from('registro_peso')
-      .select('fecha_registro, peso_kg')
-      .eq('paciente_email', session.email)
-      .gte('fecha_registro', desde)
-      .lte('fecha_registro', hasta)
-      .order('fecha_registro', { ascending: true });
-    
-    if (error) {
-      toast.error('Error al cargar datos');
-    } else {
-      setData(records || []);
+    try {
+      const { data: records, error } = await supabase
+        .from('registro_peso')
+        .select('fecha_registro, peso_kg')
+        .eq('paciente_email', session.email)
+        .gte('fecha_registro', desde)
+        .lte('fecha_registro', hasta)
+        .order('fecha_registro', { ascending: true });
+      
+      if (error) {
+        toast.error('Error al cargar datos');
+      } else {
+        setData(records || []);
+      }
+    } catch(err) {
+      toast.error('Ocurrió un error inesperado al cargar la evolución.');
+      console.error(err);
+      setData([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const filledData = useMemo(() => {
-    if (!desde || !hasta) return [];
-    const startDate = new Date(desde + 'T12:00:00');
-    const endDate = new Date(hasta + 'T12:00:00');
-    
-    const result = [];
-    const dataMap = new Map();
-    for(const d of data) {
-       dataMap.set(d.fecha_registro, d.peso_kg);
-    }
+    try {
+      if (!desde || !hasta) return [];
+      const startDate = new Date(desde + 'T12:00:00');
+      const endDate = new Date(hasta + 'T12:00:00');
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return [];
 
-    let currentDate = new Date(startDate);
-    let totalDays = 0;
-    while(currentDate <= endDate && totalDays < 366) { // max 1 año seguro
-       const ds = currentDate.toISOString().split('T')[0];
-       result.push({
-          fecha_registro: ds,
-          peso_kg: dataMap.has(ds) ? dataMap.get(ds) : null,
-       });
-       currentDate.setDate(currentDate.getDate() + 1);
-       totalDays++;
+      const result = [];
+      const dataMap = new Map();
+      for(const d of (data || [])) {
+         if (d && d.fecha_registro) {
+           dataMap.set(d.fecha_registro, d.peso_kg);
+         }
+      }
+
+      let currentDate = new Date(startDate);
+      let totalDays = 0;
+      while(currentDate <= endDate && totalDays < 366) { // max 1 año seguro
+         const ds = currentDate.toISOString().split('T')[0];
+         result.push({
+            fecha_registro: ds,
+            peso_kg: dataMap.has(ds) ? dataMap.get(ds) : null,
+         });
+         currentDate.setDate(currentDate.getDate() + 1);
+         totalDays++;
+      }
+      return result;
+    } catch(err) {
+      console.error('Error calculating filledData:', err);
+      return [];
     }
-    return result;
   }, [data, desde, hasta]);
 
   // Stats calculation
-  const pesos = data.map(r => parseFloat(r.peso_kg));
-  const min = pesos.length ? Math.min(...pesos) : 0;
-  const max = pesos.length ? Math.max(...pesos) : 0;
+  const pesos = (data || []).map(r => parseFloat(r.peso_kg)).filter(v => !isNaN(v) && isFinite(v));
+  const min = pesos.length > 0 ? Math.min(...pesos) : 0;
+  const max = pesos.length > 0 ? Math.max(...pesos) : 0;
   const domainMin = pesos.length > 0 ? Math.max(0, Math.floor(min) - 1) : 0;
   const domainMax = pesos.length > 0 ? Math.ceil(max) + 1 : 100;
-  const primerPeso = pesos.length ? pesos[0] : 0;
-  const ultimoPeso = pesos.length ? pesos[pesos.length-1] : 0;
+  const primerPeso = pesos.length > 0 ? pesos[0] : 0;
+  const ultimoPeso = pesos.length > 0 ? pesos[pesos.length-1] : 0;
   const evolucion = ultimoPeso - primerPeso;
   const evolucionColor = evolucion < 0 ? 'text-verde' : evolucion > 0 ? 'text-rojo' : 'text-[#eab308]';
   const registrosNoEfectuados = filledData.length - data.length;
@@ -340,16 +356,17 @@ function Evolucion({ session }: { session: UserSession }) {
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={filledData}>
                   <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#dde3ea" />
-                  <XAxis dataKey="fecha_registro" tickFormatter={(v) => { const parts = v.split('-'); return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`; }} tick={{fontSize: 11, fill: '#6c7a89'}} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="fecha_registro" tickFormatter={(v) => { if (typeof v !== 'string') return ''; const parts = v.split('-'); return parts.length >= 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : v; }} tick={{fontSize: 11, fill: '#6c7a89'}} axisLine={false} tickLine={false} />
                   <YAxis domain={[domainMin, domainMax]} tickFormatter={(v) => Number(v).toFixed(2)} tick={{fontSize: 11, fill: '#6c7a89'}} axisLine={false} tickLine={false} />
                   <Tooltip 
                     cursor={{fill: 'rgba(0,146,146,0.05)'}} 
                     content={({ active, payload, label }) => {
-                      if (active && label) {
-                        const parts = String(label).split('-');
-                        const formattedLabel = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : label;
-                        const val = payload && payload.length ? payload[0].value : null;
-                        if (val === null || val === 0) {
+                      if (active && payload && payload.length) {
+                        const labelStr = String(label || '');
+                        const parts = labelStr.split('-');
+                        const formattedLabel = parts.length >= 3 ? `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}` : labelStr;
+                        const val = payload[0].value;
+                        if (val === null || val === undefined || isNaN(Number(val))) {
                           return (
                             <div className="bg-white p-[10px] border border-gris-bor shadow-lg rounded-[8px] text-[0.8rem] text-texto text-center">
                               <p className="font-semibold mb-[2px]">{formattedLabel}</p>
@@ -364,10 +381,10 @@ function Evolucion({ session }: { session: UserSession }) {
                           </div>
                         );
                       }
-                      return null;
+                      return <div style={{ display: 'none' }} />;
                     }}
                   />
-                  <Bar dataKey="peso_kg" fill="#009292" radius={[4,4,0,0]} />
+                  <Bar dataKey="peso_kg" fill="#009292" radius={[4,4,0,0]} isAnimationActive={false} />
                 </BarChart>
             </ResponsiveContainer>
           </div>
