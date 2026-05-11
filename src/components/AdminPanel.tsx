@@ -9,6 +9,9 @@ import * as XLSX from 'xlsx';
 import AdminEvolucion from './AdminEvolucion';
 import AdminCargaDiferida from './AdminCargaDiferida';
 
+const EDGE_URL = 'https://bzfbfvpiopoolafgiwrk.supabase.co/functions/v1/smart-handler';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6ZmJmdnBpb3Bvb2xhZmdpd3JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTMwMzUsImV4cCI6MjA5MzI4OTAzNX0.MdhhiKHj5JF10aHv-h-LYII2fh_SYXElCC10oyoUnAU';
+
 interface AdminPanelProps {
   currentView: string;
   onNavigate: (view: string) => void;
@@ -265,6 +268,26 @@ function ModifTab() {
     }
   };
 
+  const handleResetPass = async () => {
+    setLoading(true);
+    try {
+        const res = await fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}` },
+          body: JSON.stringify({ email: paciente.email, password: 'bajardepeso', accion: 'actualizar' })
+        });
+        const result = await res.json();
+        if (!result.success) {
+           throw new Error(result.error || 'Error al resetear contraseña');
+        }
+        toast.success('Contraseña reseteada a "bajardepeso"');
+    } catch (e: any) {
+        toast.error(e.message || 'Error al resetear contraseña.');
+    } finally {
+        setLoading(false);
+    }
+  };
+
   if (!paciente) {
     return (
       <div>
@@ -339,14 +362,14 @@ function ModifTab() {
         </label>
       </div>
 
-      <button className="btn btn-primario mt-2" onClick={handleSave} disabled={loading}>{loading ? 'GUARDANDO...' : 'GUARDAR CAMBIOS'}</button>
-      <button className="btn btn-outline mt-[10px]" onClick={() => setPaciente(null)}>VOLVER A LA LISTA</button>
+      <div className="flex gap-2 mt-2">
+        <button className="btn btn-primario flex-[2] !mt-0" onClick={handleSave} disabled={loading}>{loading ? 'GUARDANDO...' : 'GUARDAR CAMBIOS'}</button>
+        <button className="btn flex-[1] !mt-0 bg-red-50 !text-red-600 border border-red-200 hover:bg-red-100 font-semibold" onClick={handleResetPass} disabled={loading}>RESET PASS</button>
+      </div>
+      <button className="btn btn-outline mt-[10px] w-full" onClick={() => setPaciente(null)}>VOLVER A LA LISTA</button>
     </div>
   );
 }
-
-const EDGE_URL = 'https://bzfbfvpiopoolafgiwrk.supabase.co/functions/v1/smart-handler';
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6ZmJmdnBpb3Bvb2xhZmdpd3JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTMwMzUsImV4cCI6MjA5MzI4OTAzNX0.MdhhiKHj5JF10aHv-h-LYII2fh_SYXElCC10oyoUnAU';
 
 function SyncTab() {
   const [fileData, setFileData] = useState<any>(null);
@@ -561,14 +584,18 @@ function AdminsTab({ session }: { session: UserSession }) {
 
   const handleResetPass = async (email: string) => {
     try {
-        await fetch(EDGE_URL, {
+        const res = await fetch(EDGE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}` },
           body: JSON.stringify({ email: email, password: 'bajardepeso', accion: 'actualizar' })
         });
-        toast.success("Contraseña reseteada. (Requiere soporte en Edge Function)");
-    } catch {
-        toast.error("Error al resetear contraseña.");
+        const result = await res.json();
+        if (!result.success) {
+           throw new Error(result.error || 'Error en Edge Function');
+        }
+        toast.success("Contraseña reseteada a 'bajardepeso'.");
+    } catch (e: any) {
+        toast.error(e.message || "Error al resetear contraseña.");
     }
   };
 

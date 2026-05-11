@@ -6,7 +6,7 @@ import { UserSession } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { updatePatientWeights } from '../utils/pesoUpdater';
 
-import { Scale, LineChart as LineChartIcon, Utensils, Dumbbell, LogOut, Home } from 'lucide-react';
+import { Scale, LineChart as LineChartIcon, Utensils, Dumbbell, LogOut, Home, Eye, EyeOff, Users } from 'lucide-react';
 
 interface PatientPanelProps {
   currentView: string;
@@ -21,6 +21,7 @@ export default function PatientPanel({ currentView, session, onNavigate }: Patie
     'PESO': 'REGISTRAR PESO',
     'EVOLUCION': 'MI EVOLUCIÓN',
     'EXERCISE': 'EJERCICIO',
+    'TALLERES': 'TALLERES Y ENCUENTROS',
   };
 
   return (
@@ -58,6 +59,8 @@ export default function PatientPanel({ currentView, session, onNavigate }: Patie
         {currentView === 'PESO' && <RegistrarPeso session={session} />}
         {currentView === 'EVOLUCION' && <Evolucion session={session} />}
         {currentView === 'EXERCISE' && <Construccion title="Ejercicio" />}
+        {currentView === 'TALLERES' && <Construccion title="Talleres y Encuentros" />}
+        {currentView === 'PROFILE' && <PatientProfile session={session} onNavigate={onNavigate} />}
       </div>
     </div>
   );
@@ -100,6 +103,14 @@ function PatientHome({ onNavigate }: { onNavigate?: (view: string) => void }) {
       >
         <Dumbbell size={18} />
         <span className="text-[0.9rem] font-medium">Ejercicio</span>
+      </button>
+
+      <button 
+        onClick={() => onNavigate && onNavigate('TALLERES')}
+        className="flex justify-center items-center gap-3 py-[14px] bg-verde text-white rounded-[10px] hover:opacity-90 transition-opacity w-full"
+      >
+        <Users size={18} />
+        <span className="text-[0.9rem] font-medium">Talleres y Encuentros</span>
       </button>
 
       <button 
@@ -369,6 +380,80 @@ function Evolucion({ session }: { session: UserSession }) {
           No hay registros para las fechas seleccionadas.
         </div>
       )}
+    </div>
+  );
+}
+
+function PatientProfile({ session, onNavigate }: { session: UserSession, onNavigate?: (view: string) => void }) {
+  const [formData, setFormData] = useState({ password: '' });
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSave = async () => {
+    if (!formData.password) return toast.error('Ingresá una nueva contraseña');
+    if (formData.password === 'bajardepeso') return toast.error('La contraseña no puede ser la por defecto');
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: formData.password });
+      if (error) throw error;
+      
+      toast.success('Contraseña actualizada correctamente');
+      setFormData({ password: '' });
+      localStorage.removeItem('force_password_change');
+      
+      if (onNavigate) {
+          onNavigate('PESO');
+      }
+    } catch (e: any) {
+      let ErrorMsg = e.message || 'Error al actualizar contraseña';
+      if (ErrorMsg.includes('New password should be different from the old password')) {
+        ErrorMsg = 'La nueva contraseña debe ser diferente de la anterior';
+      } else if (ErrorMsg.includes('Password should be at least')) {
+        ErrorMsg = 'La contraseña debe tener al menos 6 caracteres';
+      }
+      toast.error(ErrorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isForced = localStorage.getItem('force_password_change') === 'true';
+
+  return (
+    <div>
+      <div className="bg-gris-bg rounded-[12px] p-[16px_18px] mb-[20px]">
+        <h3 className="text-azul font-semibold mb-1">Mi Perfil</h3>
+        <p className="text-suave text-sm mb-4">Actualizá tu contraseña.</p>
+        
+        {isForced && (
+            <div className="bg-red-50 text-red-700 text-[0.8rem] p-3 rounded-lg border border-red-200 mb-4 leading-tight">
+                <strong>Atención:</strong> Por razones de seguridad, es <b>obligatorio</b> cambiar tu contraseña por defecto antes de continuar.
+            </div>
+        )}
+
+        <div className="campo"><label>Email</label><input type="email" value={session.email || ''} disabled className="bg-white text-suave" /></div>
+        
+        <div className="campo mt-4 relative">
+            <label>Nueva Contraseña <span className="text-red-500">*</span></label>
+            <input 
+              type={showPassword ? "text" : "password"} 
+              placeholder="Nueva contraseña..." 
+              value={formData.password} 
+              onChange={e => setFormData({...formData, password: e.target.value})} 
+              className="pr-10"
+            />
+            <button 
+              type="button" 
+              className="absolute right-2 top-[34px] text-gray-500 hover:text-gray-700"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+        </div>
+
+        <button className="btn btn-primario mt-2" onClick={handleSave} disabled={loading}>{loading ? 'GUARDANDO...' : 'GUARDAR CONTRASEÑA'}</button>
+      </div>
     </div>
   );
 }

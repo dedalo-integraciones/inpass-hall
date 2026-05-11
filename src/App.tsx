@@ -11,19 +11,24 @@ import Sidebar from './components/Sidebar';
 import AdminPanel from './components/AdminPanel';
 import PatientPanel from './components/PatientPanel';
 import { Menu, MoreVertical, Home as HomeIcon } from 'lucide-react';
-import { Toaster, toast } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'HOME' | 'ALTAS' | 'MODIF' | 'SYNC' | 'PESO' | 'EVOLUCION' | 'ADMINS' | 'PROFILE' | 'NUTRITION' | 'EXERCISE' | 'ADMIN_EVOLUCION' | 'CARGA_DIFERIDA'>('HOME');
+  const [currentView, setCurrentView] = useState<'HOME' | 'ALTAS' | 'MODIF' | 'SYNC' | 'PESO' | 'EVOLUCION' | 'ADMINS' | 'PROFILE' | 'NUTRITION' | 'EXERCISE' | 'TALLERES' | 'ADMIN_EVOLUCION' | 'CARGA_DIFERIDA'>('HOME');
 
   useEffect(() => {
-    const checkSession = async () => {
+    let active = true;
+
+    const initAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        if (!active) return;
+        
         if (error) {
+          console.error("Auth error:", error);
           if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid') || error.status === 401) {
             await supabase.auth.signOut();
           }
@@ -37,76 +42,107 @@ export default function App() {
           setLoading(false);
         }
       } catch (err) {
-        console.error('Session check error:', err);
-        setLoading(false);
+        console.error("Init auth error:", err);
+        if (active) setLoading(false);
       }
     };
 
-    checkSession();
+    initAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!active) return;
       if (event === 'SIGNED_IN' && session?.user) {
-        await loadUserProfile(session.user.email!);
+        // If we already have the session, don't continually reload profile!
+        // To be safe, only do it if loading is false, or session is not set
+        setSession(prev => {
+          if (!prev) {
+            loadUserProfile(session.user.email!);
+          }
+          return prev;
+        });
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setLoading(false);
       }
     });
 
-    return () => authListener.subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadUserProfile = async (email: string) => {
     try {
       setLoading(true);
-      const { data: profile } = await supabase
+
+      // 1. Chequear tabla 'acceso' (ADMIN, SADMIN, etc)
+      const { data: adminProfile } = await supabase
         .from('acceso')
         .select('*')
         .ilike('email', email)
         .maybeSingle();
 
-      if (profile && profile.activo) {
-        let pacienteId = undefined;
-        if (profile.nivel?.toUpperCase() === 'PACIENTE') {
-          const { data: p } = await supabase
-            .from('pacientes')
-            .select('id')
-            .ilike('email', email)
-            .maybeSingle();
-          pacienteId = p?.id;
-        }
-
+      if (adminProfile && adminProfile.activo) {
         setSession({
           email,
-          name: `${profile.nombre} ${profile.apellido}`,
-          level: profile.nivel,
-          pacienteId
+          name: `${adminProfile.nombre} ${adminProfile.apellido}`,
+          level: adminProfile.nivel,
         });
 
         if (localStorage.getItem('force_password_change') === 'true') {
           setCurrentView('PROFILE');
         } else {
-          setCurrentView(profile.nivel?.toUpperCase() === 'PACIENTE' ? 'PESO' : 'HOME');
+          setCurrentView('HOME');
         }
-      } else {
-        // SESIÓN HUÉRFANA O INACTIVA
-        console.warn("Usuario sin acceso. Cerrando...");
-        await supabase.auth.signOut();
-        setSession(null);
-        toast.error('Email o contraseña incorrectos');
+        return;
       }
-    } catch (err) {
-      console.error('Error loading profile:', err);
+
+      // 2. Si no es admin/sadmin (o no está activo en acceso), chequear tabla 'pacientes'
+      const { data: pacienteProfile } = await supabase
+        .from('pacientes')
+        .select('*')
+        .ilike('email', email)
+        .maybeSingle();
+
+      if (pacienteProfile && pacienteProfile.activo) {
+        setSession({
+          email,
+          name: `${pacienteProfile.nombre} ${pacienteProfile.apellido}`,
+          level: 'PACIENTE',
+          pacienteId: pacienteProfile.id,
+        });
+
+        if (localStorage.getItem('force_password_change') === 'true') {
+          setCurrentView('PROFILE');
+        } else {
+          setCurrentView('PESO');
+        }
+        return;
+      }
+
+      // SESIÓN HUÉRFANA O INACTIVA
+      await supabase.auth.signOut();
+      setSession(null);
+      toast.error('El usuario está inactivo o no tiene acceso autorizado.');
+    } catch (err: any) {
+      console.error("loadUserProfile error:", err);
       setSession(null);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center font-poppins text-suave">Cargando aplicación...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center font-poppins text-suave">
+        <div className="mb-4">Cargando aplicación...</div>
+      </div>
+    );
+  }
 
   const handleNavigate = (view: any) => {
-    if (localStorage.getItem('force_password_change') === 'true' && ['ADMIN', 'SADMIN'].includes(session?.level?.toUpperCase() || '')) {
+    if (localStorage.getItem('force_password_change') === 'true') {
       setCurrentView('PROFILE');
       return;
     }

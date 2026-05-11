@@ -66,6 +66,7 @@ export default function Sidebar({ isOpen, onClose, session, currentView, onNavig
               <NavItem view="EVOLUCION" icon={TrendingUp} label="Mi evolución" />
               <NavItem view="NUTRITION" icon={Utensils} label="Nutrición" />
               <NavItem view="EXERCISE" icon={Dumbbell} label="Ejercicio" />
+              <NavItem view="TALLERES" icon={Users} label="Talleres y Encuentros" />
             </>
           )}
 
