@@ -297,6 +297,8 @@ function EvolucionBarChart({ email, nombre }: { email: string, nombre: string })
     const startDate = new Date(desde + 'T12:00:00');
     const endDate = new Date(hasta + 'T12:00:00');
     
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return [];
+
     const result = [];
     const dataMap = new Map();
     for(const d of data) {
