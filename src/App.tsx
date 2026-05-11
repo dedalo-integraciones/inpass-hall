@@ -176,10 +176,10 @@ export default function App() {
   }
 
   return (
-    <div className="w-full max-w-[480px] bg-white rounded-[20px] shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden relative">
-      <Toaster position="top-center" />
-      
-      <div className="bg-azul p-[28px_24px] text-center relative flex items-center justify-center min-h-[90px]">
+      <div className="w-full max-w-[480px] bg-white rounded-[20px] shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden relative">
+        <Toaster position="top-center" />
+        
+        <div className="bg-azul p-[28px_24px] text-center relative flex items-center justify-center min-h-[90px]">
             {session && (
               <button 
                 className="absolute left-[18px] top-1/2 -translate-y-1/2 p-2 rounded-md hover:bg-white/10 transition-colors"
@@ -208,7 +208,7 @@ export default function App() {
             onNavigate={handleNavigate}
           />
 
-          <main className="p-[28px_24px_32px]">
+          <main className="p-[28px_24px_60px]">
             {!session ? (
               <Login onLoginSuccess={() => {}} />
             ) : session.level === 'PACIENTE' ? (
@@ -217,6 +217,11 @@ export default function App() {
               <AdminPanel currentView={currentView} onNavigate={handleNavigate} session={session} />
             )}
           </main>
+          <img 
+            src="https://i.ibb.co/FLTMwg1n/powered-by-Negro.png" 
+            alt="Powered By" 
+            className="absolute bottom-4 right-4 z-[9999] h-[20px] w-auto opacity-70 pointer-events-none" 
+          />
     </div>
   );
 }
